@@ -1,0 +1,15 @@
+name: napari-organoidtracker
+display_name: OrganoidTracker loader
+# use 'hidden' to remove plugin from napari hub search results
+visibility: public
+# see https://napari.org/stable/plugins/manifest.html for valid categories
+categories: ["IO"]  # Could add "Annotation" if we ever add tracking or editing capabilities
+contributions:
+  commands:
+    - id: napari-organoidtracker.get_reader
+      python_name: napari_organoidtracker._reader:napari_get_reader
+      title: Open data with OrganoidTracker loader
+  readers:
+    - command: napari-organoidtracker.get_reader
+      accepts_directories: false
+      filename_patterns: ['*.aut']
