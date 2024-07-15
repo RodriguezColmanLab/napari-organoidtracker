@@ -9,8 +9,10 @@ https://napari.org/stable/plugins/guides.html?#readers
 import json
 from typing import Any, Dict, List, Tuple
 
+from napari_organoidtracker import _experiment
+from napari_organoidtracker._experiment import Experiment
 from napari_organoidtracker._links import Links
-from napari_organoidtracker._positions import Position
+from napari_organoidtracker._position import Position
 
 
 def napari_get_reader(path):
@@ -68,18 +70,15 @@ def reader_function(input_path):
 
     return_list = []
     for path in paths:
-        tracking_data, add_kwargs = _read_organoidtracker_file(path)
-
-        layer_type = "tracks"
-        return_list.append((tracking_data, add_kwargs, layer_type))
+        experiment = _read_organoidtracker_file(path)
+        return_list += _experiment.experiment_to_napari(experiment)
     return return_list
 
 
-def _read_organoidtracker_file(filepath) -> Tuple[List, Dict]:
-    """Read a .aut file and return the data in Napari format.
-
-    The file format of Napari is documented at https://napari.org/stable/howtos/layers/tracks.html .
+def _read_organoidtracker_file(filepath) -> Experiment:
+    """Read a .aut file and return the data as a parsed Experiment object.
     """
+    experiment = Experiment()
 
     with open(filepath) as handle:
         data = json.load(handle)
@@ -88,16 +87,13 @@ def _read_organoidtracker_file(filepath) -> Tuple[List, Dict]:
         # We don't have a general data file, but a specialized one
         raise ValueError(
             "Unknown file format",
-            "This plugin is not able to load this AUT file: it is missing the"
-            " version tag.",
+            "This plugin is not able to load this AUT file: it is missing the version tag.",
         )
 
     if data.get("version", "v1") != "v1":
         raise ValueError(
             "Unknown data version",
-            "This plugin is not able to load data of version "
-            + str(data["version"])
-            + ".",
+            "This plugin is not able to load data of version " + str(data["version"]) + ".",
         )
 
     # if "shapes" in data:
@@ -107,56 +103,21 @@ def _read_organoidtracker_file(filepath) -> Tuple[List, Dict]:
     # _parse_position_format(experiment, data["positions"], min_time_point, max_time_point)
 
     if "links" in data:
-        tracking_data, linking_graph = _parse_links_format(data["links"])
-    elif (
-        "links_scratch" in data
-    ):  # Deprecated, was used back when experiments could hold multiple linking sets
-        tracking_data, linking_graph = _parse_links_format(
-            data["links_scratch"]
-        )
-    elif (
-        "links_baseline" in data
-    ):  # Deprecated, was used back when experiments could hold multiple linking sets
-        tracking_data, linking_graph = _parse_links_format(
-            data["links_baseline"]
-        )
-    else:
-        tracking_data = []
-        linking_graph = {}
+        _parse_links_format(experiment, data["links"])
+    elif "links_scratch" in data:  # Deprecated, was used back when experiments could hold multiple linking sets
+        _parse_links_format(experiment, data["links_scratch"])
+    elif "links_baseline" in data:  # Deprecated, was used back when experiments could hold multiple linking sets
+        _parse_links_format(experiment, data["links_baseline"])
 
-    return tracking_data, {"graph": linking_graph}
+    return experiment
 
 
-def _parse_links_format(links_json: Dict[str, Any]) -> Tuple[List, Dict]:
+def _parse_links_format(experiment: Experiment, links_json: Dict[str, Any]):
     """Parses a node_link_graph and adds all links and positions to the experiment."""
     links = Links()
     _add_d3_data(links, links_json)
-
     links.sort_tracks_by_x()
-
-    positions_table = (
-        []
-    )  # Each row is [track_id, t, z, y, z], ordered by track_id and then t
-    linking_graph = {}
-    for track_id, track in links.find_all_tracks_and_ids():
-        for position in track.positions():
-            positions_table.append(
-                [
-                    track_id,
-                    position.time_point_number(),
-                    position.z,
-                    position.y,
-                    position.x,
-                ]
-            )
-
-        previous_track_ids = [
-            links.get_track_id(previous_track)
-            for previous_track in track.get_previous_tracks()
-        ]
-        linking_graph[track_id] = previous_track_ids
-
-    return positions_table, linking_graph
+    experiment.links = links
 
 
 def _add_d3_data(links: Links, links_json: Dict):
@@ -174,7 +135,7 @@ def _add_d3_data(links: Links, links_json: Dict):
                 # Lineage metadata, store it
                 links.set_lineage_data(
                     links.get_track(source),
-                    data_key[len("__lineage_") :],
+                    data_key[len("__lineage_"):],
                     data_value,
                 )
 
@@ -187,6 +148,4 @@ def _parse_position(json_structure: Dict[str, Any]) -> Position:
             json_structure["z"],
             time_point_number=json_structure["_time_point_number"],
         )
-    return Position(
-        json_structure["x"], json_structure["y"], json_structure["z"]
-    )
+    return Position(json_structure["x"], json_structure["y"], json_structure["z"])

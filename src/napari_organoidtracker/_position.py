@@ -6,7 +6,7 @@ from napari_organoidtracker._basics import TimePoint
 
 
 class Position:
-    """A detected position. Only the 3D + time position is stored here, see the PositionShape class for the shape.
+    """A detected position. Only the 3D + time position is stored here.
     The position is immutable."""
 
     __slots__ = [

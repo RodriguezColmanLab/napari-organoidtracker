@@ -4,7 +4,7 @@ import warnings
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 from napari_organoidtracker._basics import DataType, TimePoint
-from napari_organoidtracker._positions import Position
+from napari_organoidtracker._position import Position
 
 
 class LinkingTrack:
