@@ -1,17 +1,8 @@
 # napari-organoidtracker
 
-[![License GNU GPL v3.0](https://img.shields.io/pypi/l/napari-organoidtracker.svg?color=green)](https://github.com/RodriguezColmanLab/napari-organoidtracker/raw/main/LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/napari-organoidtracker.svg?color=green)](https://pypi.org/project/napari-organoidtracker)
-[![Python Version](https://img.shields.io/pypi/pyversions/napari-organoidtracker.svg?color=green)](https://python.org)
-[![tests](https://github.com/RodriguezColmanLab/napari-organoidtracker/workflows/tests/badge.svg)](https://github.com/RodriguezColmanLab/napari-organoidtracker/actions)
-[![codecov](https://codecov.io/gh/RodriguezColmanLab/napari-organoidtracker/branch/main/graph/badge.svg)](https://codecov.io/gh/RodriguezColmanLab/napari-organoidtracker)
-[![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-organoidtracker)](https://napari-hub.org/plugins/napari-organoidtracker)
+Allows you to load OrganoidTracker files into Napari. Right now, only the tracks can be loaded, position metadata is ignored. Feel free to contribute to the project.
 
-Allows you to load OrganoidTracker tracking files into Napari
-
-----------------------------------
-
-This [napari] plugin was generated with [copier] using the [napari-plugin-template].
+The plugin is only for viewing OrganoidTracker data, you cannot track new data with it or edit existing data. For that, you'll need to use the OrganoidTracker software itself, which can be found [here](https://github.com/jvzonlab/OrganoidTracker).
 
 <!--
 Don't miss the full getting started guide to set up your new package:
@@ -23,39 +14,16 @@ https://napari.org/stable/plugins/index.html
 
 ## Installation
 
-You can install `napari-organoidtracker` via [pip]:
+You can install `napari-organoidtracker` via `pip`:
 
     pip install napari-organoidtracker
 
 
-
-
-## Contributing
-
-Contributions are very welcome. Tests can be run with [tox], please ensure
-the coverage at least stays the same before you submit a pull request.
-
 ## License
 
-Distributed under the terms of the [GNU GPL v3.0] license,
+Distributed under the terms of the [GNU GPL v3.0](LICENSE) license,
 "napari-organoidtracker" is free and open source software
 
 ## Issues
 
-If you encounter any problems, please [file an issue] along with a detailed description.
-
-[napari]: https://github.com/napari/napari
-[copier]: https://copier.readthedocs.io/en/stable/
-[@napari]: https://github.com/napari
-[MIT]: http://opensource.org/licenses/MIT
-[BSD-3]: http://opensource.org/licenses/BSD-3-Clause
-[GNU GPL v3.0]: http://www.gnu.org/licenses/gpl-3.0.txt
-[GNU LGPL v3.0]: http://www.gnu.org/licenses/lgpl-3.0.txt
-[Apache Software License 2.0]: http://www.apache.org/licenses/LICENSE-2.0
-[Mozilla Public License 2.0]: https://www.mozilla.org/media/MPL/2.0/index.txt
-[napari-plugin-template]: https://github.com/napari/napari-plugin-template
-
-[napari]: https://github.com/napari/napari
-[tox]: https://tox.readthedocs.io/en/latest/
-[pip]: https://pypi.org/project/pip/
-[PyPI]: https://pypi.org/
+If you encounter any problems, please file an issue along with a detailed description.
