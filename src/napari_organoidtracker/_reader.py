@@ -7,12 +7,13 @@ https://napari.org/stable/plugins/guides.html?#readers
 """
 
 import json
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
 from napari_organoidtracker import _experiment
 from napari_organoidtracker._experiment import Experiment
 from napari_organoidtracker._links import Links
 from napari_organoidtracker._position import Position
+from napari_organoidtracker._position_data import PositionData
 
 
 def napari_get_reader(path):
@@ -71,7 +72,7 @@ def reader_function(input_path):
     return_list = []
     for path in paths:
         experiment = _read_organoidtracker_file(path)
-        return_list += _experiment.experiment_to_napari(experiment)
+        return_list += _experiment._experiment_to_napari(experiment)
     return return_list
 
 
@@ -115,13 +116,26 @@ def _read_organoidtracker_file(filepath) -> Experiment:
 def _parse_links_format(experiment: Experiment, links_json: Dict[str, Any]):
     """Parses a node_link_graph and adds all links and positions to the experiment."""
     links = Links()
-    _add_d3_data(links, links_json)
+    position_data = PositionData()
+    _add_d3_data(position_data, links, links_json)
     links.sort_tracks_by_x()
+    experiment.position_data = position_data
     experiment.links = links
 
 
-def _add_d3_data(links: Links, links_json: Dict):
+def _add_d3_data(position_data: PositionData, links: Links, links_json: Dict):
     """Adds data in the D3.js node-link format. Used for deserialization."""
+
+    # Add position data
+    for node in links_json["nodes"]:
+        if len(node.keys()) == 1:
+            # No extra data found
+            continue
+        position = _parse_position(node["id"])
+        for data_key, data_value in node.items():
+            if data_key == "id":
+                continue
+            position_data.set_position_data(position, data_key, data_value)
 
     # Add links
     for link in links_json["links"]:
@@ -133,11 +147,7 @@ def _add_d3_data(links: Links, links_json: Dict):
         for data_key, data_value in link.items():
             if data_key.startswith("__lineage_"):
                 # Lineage metadata, store it
-                links.set_lineage_data(
-                    links.get_track(source),
-                    data_key[len("__lineage_"):],
-                    data_value,
-                )
+                links.set_lineage_data(links.get_track(source), data_key[len("__lineage_"):], data_value)
 
 
 def _parse_position(json_structure: Dict[str, Any]) -> Position:

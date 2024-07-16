@@ -4,8 +4,7 @@ from napari_organoidtracker import napari_get_reader
 
 
 def test_reader():
-    """An example of how you might test your plugin."""
-
+    # A very simple tracking file
     my_test_file = os.path.join(os.path.dirname(__file__), "nd410xy01.aut")
 
     # try to read it back in
@@ -21,6 +20,20 @@ def test_reader():
     assert len(layer_data_tuple[1]["graph"]) == 288
 
     assert layer_data_tuple[2] == "tracks"
+
+
+def test_metadata():
+    # Tests a file with position metadata
+    my_test_file = os.path.join(os.path.dirname(__file__), "E482-AZ-pos3.aut")
+
+    reader = napari_get_reader(my_test_file)
+    layer_data_list = reader(my_test_file)
+    layer_data_tuple = layer_data_list[0]
+    assert layer_data_tuple[2] == "tracks"
+
+    kwargs = layer_data_tuple[1]
+    assert kwargs["features"]["intensity_cfp_volume"][0] == 1544
+    assert len(kwargs["features"]["intensity_cfp_volume"]) == 5632
 
 
 def test_get_reader_pass():
