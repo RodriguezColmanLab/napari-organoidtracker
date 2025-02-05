@@ -72,6 +72,13 @@ def _experiment_to_napari(experiment: Experiment) -> List[Tuple[numpy.ndarray, D
         # Napari always starts at 0)
         positions_table[:, 1] -= positions_table[:, 1].min()
 
+        # Remove the Z column if all values are 0 (then we have 2D tracking data)
+        if numpy.all(positions_table[:, 2] == 0):
+            positions_table = numpy.delete(positions_table, 2, axis=1)
+            print("Removed Z column from tracking data because all values were 0.")
+        else:
+            print("Z column was not removed from tracking data because not all values were 0.")
+
         output_array.append((positions_table, {"graph": linking_graph, "features": metadata}, "tracks"))
 
     return output_array

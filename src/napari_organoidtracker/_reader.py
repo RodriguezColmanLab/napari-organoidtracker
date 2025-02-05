@@ -7,11 +7,11 @@ https://napari.org/stable/plugins/guides.html?#readers
 """
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from napari_organoidtracker import _experiment
 from napari_organoidtracker._experiment import Experiment
-from napari_organoidtracker._links import Links
+from napari_organoidtracker._links import Links, LinkingTrack
 from napari_organoidtracker._position import Position
 from napari_organoidtracker._position_data import PositionData
 
@@ -91,7 +91,17 @@ def _read_organoidtracker_file(filepath) -> Experiment:
             "This plugin is not able to load this AUT file: it is missing the version tag.",
         )
 
-    if data.get("version", "v1") != "v1":
+    version = data.get("version", "v1")
+    if version == "v1":
+        if "links" in data:
+            _parse_d3_links_format(experiment, data["links"])
+        elif "links_scratch" in data:  # Deprecated, was used back when experiments could hold multiple linking sets
+            _parse_d3_links_format(experiment, data["links_scratch"])
+        elif "links_baseline" in data:  # Deprecated, was used back when experiments could hold multiple linking sets
+            _parse_d3_links_format(experiment, data["links_baseline"])
+    elif version == "v2":
+        _parse_tracks_and_meta_format(experiment, data["tracks"])
+    else:
         raise ValueError(
             "Unknown data version",
             "This plugin is not able to load data of version " + str(data["version"]) + ".",
@@ -103,17 +113,12 @@ def _read_organoidtracker_file(filepath) -> Experiment:
     # elif "positions" in data:
     # _parse_position_format(experiment, data["positions"], min_time_point, max_time_point)
 
-    if "links" in data:
-        _parse_links_format(experiment, data["links"])
-    elif "links_scratch" in data:  # Deprecated, was used back when experiments could hold multiple linking sets
-        _parse_links_format(experiment, data["links_scratch"])
-    elif "links_baseline" in data:  # Deprecated, was used back when experiments could hold multiple linking sets
-        _parse_links_format(experiment, data["links_baseline"])
+
 
     return experiment
 
 
-def _parse_links_format(experiment: Experiment, links_json: Dict[str, Any]):
+def _parse_d3_links_format(experiment: Experiment, links_json: Dict[str, Any]):
     """Parses a node_link_graph and adds all links and positions to the experiment."""
     links = Links()
     position_data = PositionData()
@@ -159,3 +164,42 @@ def _parse_position(json_structure: Dict[str, Any]) -> Position:
             time_point_number=json_structure["_time_point_number"],
         )
     return Position(json_structure["x"], json_structure["y"], json_structure["z"])
+
+
+def _parse_tracks_and_meta_format(experiment: Experiment, tracks_json: List[Dict]):
+    links = experiment.links
+
+    # Iterate a first time to add the tracks
+    for track_json in tracks_json:
+        time_point_number_start = track_json["time_point_start"]
+        time_point_number_end = time_point_number_start + len(track_json["coords_xyz_px"]) - 1
+
+        coords_xyz_px = track_json["coords_xyz_px"]
+        positions_of_track = list()
+        min_index = 0
+        max_index = len(coords_xyz_px) - 1
+        for i in range(min_index, max_index + 1):
+            position = Position(*coords_xyz_px[i], time_point_number=time_point_number_start + i)
+            positions_of_track.append(position)
+        track = LinkingTrack(positions_of_track)
+        links.add_track(track)
+
+        # Handle lineage metadata
+        if "lineage_meta" in track_json:
+            for metadata_key, metadata_value in track_json["lineage_meta"].items():
+                links.set_lineage_data(track, metadata_key, metadata_value)
+
+    # Iterate again to add connections to previous tracks
+    for track_json in tracks_json:
+        if "coords_xyz_px_before" not in track_json:
+            continue
+        time_point_number_start = track_json["time_point_start"]
+
+        position_first = Position(*track_json["coords_xyz_px"][0], time_point_number=time_point_number_start)
+        for i, raw_position in enumerate(track_json["coords_xyz_px_before"]):
+            # Connect the tracks
+            position_previous_track = Position(*raw_position, time_point_number=time_point_number_start - 1)
+            previous_track = links.get_track(position_previous_track)
+            current_track = links.get_track(position_first)
+            links.connect_tracks(previous=previous_track, next=current_track)
+

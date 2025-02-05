@@ -1,16 +1,14 @@
 """Copied from OrganoidTracker."""
 
 import warnings
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Optional, Dict, Iterable, List, Set, Tuple, Any
 
 from napari_organoidtracker._basics import DataType, TimePoint
 from napari_organoidtracker._position import Position
 
 
 class LinkingTrack:
-    _min_time_point_number: (
-        int  # Equal to _positions_by_time_point[0].time_point_number()
-    )
+    _min_time_point_number: int  # Equal to _positions_by_time_point[0].time_point_number()
 
     # Positions by time point. Position 0 contains the position at min_time_point, position 1 min_time_point + 1, etc.
     _positions_by_time_point: List[Position]
@@ -19,40 +17,25 @@ class LinkingTrack:
     _next_tracks: List["LinkingTrack"]
     _previous_tracks: List["LinkingTrack"]
 
-    _lineage_data: Dict[
-        str, DataType
-    ]  # Only has contents if there are no previous tracks
+    _lineage_data: Dict[str, DataType]  # Only has contents if there are no previous tracks
 
     def __init__(self, positions_by_time_point: List[Position]):
-        self._min_time_point_number = positions_by_time_point[
-            0
-        ].time_point_number()
+        self._min_time_point_number = positions_by_time_point[0].time_point_number()
         self._positions_by_time_point = positions_by_time_point
         self._next_tracks = list()
         self._previous_tracks = list()
         self._lineage_data = dict()
 
-    def find_position_at_time_point_number(
-            self, time_point_number: int
-    ) -> Position:
-        if (
-                time_point_number < self._min_time_point_number
-                or time_point_number
-                >= self._min_time_point_number + len(self._positions_by_time_point)
-        ):
-            raise IndexError(
-                f"Time point {time_point_number} outside track from {self._min_time_point_number} to"
-                f" {self.last_time_point_number()}"
-            )
-        return self._positions_by_time_point[
-            time_point_number - self._min_time_point_number
-            ]
+    def find_position_at_time_point_number(self, time_point_number: int) -> Position:
+        if time_point_number < self._min_time_point_number \
+                or time_point_number >= self._min_time_point_number + len(self._positions_by_time_point):
+            raise IndexError(f"Time point {time_point_number} outside track from {self._min_time_point_number} to"
+                             f" {self.last_time_point_number()}")
+        return self._positions_by_time_point[time_point_number - self._min_time_point_number]
 
     def _find_pasts(self, time_point_number: int) -> Set[Position]:
         """Returns all positions directly linked to the position at the given time point."""
-        search_index = (
-                               time_point_number - 1
-                       ) - self._min_time_point_number  # -1 is to look one time point in the past
+        search_index = (time_point_number - 1) - self._min_time_point_number  # -1 is to look one time point in the past
         if search_index >= 0:
             return {self._positions_by_time_point[search_index]}
 
@@ -76,9 +59,7 @@ class LinkingTrack:
         """Returns the last position in this track."""
         return self._positions_by_time_point[-1]
 
-    def find_all_descending_tracks(
-            self, include_self: bool = False
-    ) -> Iterable["LinkingTrack"]:
+    def find_all_descending_tracks(self, include_self: bool = False) -> Iterable["LinkingTrack"]:
         """Iterates over all tracks that will follow this one, and the one after that, etc."""
         if include_self:
             yield self
@@ -86,9 +67,7 @@ class LinkingTrack:
             yield next_track
             yield from next_track.find_all_descending_tracks()
 
-    def find_all_previous_tracks(
-            self, include_self: bool = False
-    ) -> Iterable["LinkingTrack"]:
+    def find_all_previous_tracks(self, include_self: bool = False) -> Iterable["LinkingTrack"]:
         """Iterates over all tracks that precede this one, and the one before that, etc."""
         if include_self:
             yield self
@@ -96,9 +75,7 @@ class LinkingTrack:
             yield previous_track
             yield from previous_track.find_all_previous_tracks()
 
-    def positions(
-            self, connect_to_previous_track: bool = False
-    ) -> Iterable[Position]:
+    def positions(self, connect_to_previous_track: bool = False) -> Iterable[Position]:
         """Returns all positions in this track, in order.
 
         If connect_to_previous_track is True, then it also returns the last position of the previous track, if that exists. This is useful if you
@@ -109,16 +86,12 @@ class LinkingTrack:
 
         yield from self._positions_by_time_point
 
-    def _update_link_to_previous(
-            self, was: "LinkingTrack", will_be: "LinkingTrack"
-    ):
+    def _update_link_to_previous(self, was: "LinkingTrack", will_be: "LinkingTrack"):
         """Replaces a value in the _previous_tracks list. Make sure that old track is in the list."""
         self._previous_tracks.remove(was)
         self._previous_tracks.append(will_be)
 
-    def _update_link_to_next(
-            self, was: "LinkingTrack", will_be: "LinkingTrack"
-    ):
+    def _update_link_to_next(self, was: "LinkingTrack", will_be: "LinkingTrack"):
         """Replaces a value in the _next_tracks list. Make sure that old track is in the list."""
         self._next_tracks.remove(was)
         self._next_tracks.append(will_be)
@@ -129,26 +102,16 @@ class LinkingTrack:
 
     def last_time_point_number(self) -> int:
         """Gets the highest time point number where this track still contains a position ."""
-        return (
-                self._min_time_point_number
-                + len(self._positions_by_time_point)
-                - 1
-        )
+        return self._min_time_point_number + len(self._positions_by_time_point) - 1
 
     def min_time_point_number(self) -> int:
-        warnings.warn(
-            "LinkingTrack.min_time_point_number() was renamed to"
-            "LinkingTrack.first_time_point_number() for consistency with other classes",
-            DeprecationWarning,
-        )
+        warnings.warn("LinkingTrack.min_time_point_number() was renamed to"
+                      "LinkingTrack.first_time_point_number() for consistency with other classes", DeprecationWarning)
         return self.first_time_point_number()
 
     def max_time_point_number(self) -> int:
-        warnings.warn(
-            "LinkingTrack.max_time_point_number() was renamed to"
-            " LinkingTrack.last_time_point_number() for consistency with other classes",
-            DeprecationWarning,
-        )
+        warnings.warn("LinkingTrack.max_time_point_number() was renamed to"
+                      " LinkingTrack.last_time_point_number() for consistency with other classes", DeprecationWarning)
         return self.last_time_point_number()
 
     def first_time_point(self) -> TimePoint:
@@ -157,11 +120,7 @@ class LinkingTrack:
 
     def last_time_point(self) -> TimePoint:
         """Gets the last time point of this track."""
-        return TimePoint(
-            self._min_time_point_number
-            + len(self._positions_by_time_point)
-            - 1
-        )
+        return TimePoint(self._min_time_point_number + len(self._positions_by_time_point) - 1)
 
     def get_age(self, position: Position) -> int:
         """Gets the age of this position. This will be 0 if its the first track position, 1 on the position after that,
@@ -175,14 +134,12 @@ class LinkingTrack:
         """Gets a set of the tracks that will directly follow this track. If empty, the lineage end. If the length is 2,
         it is a cell division. Lengths of 1 will never occur. Lengths of 3 can occur, but make no biological sense.
 
-        See find_all_descending_tracks if you're also interested in the tracks that come after that.
-        """
+        See find_all_descending_tracks if you're also interested in the tracks that come after that."""
         return set(self._next_tracks)
 
     def get_previous_tracks(self) -> Set["LinkingTrack"]:
         """Gets a set of the tracks before this track. If empty, the lineage started. Normally, the set will have a
-        size of 1. Larger sizes indicate a cell merge, which makes no biological sense.
-        """
+        size of 1. Larger sizes indicate a cell merge, which makes no biological sense."""
         return set(self._previous_tracks)
 
     def __len__(self):
@@ -199,14 +156,9 @@ class LinkingTrack:
             return False
         if other._min_time_point_number != self._min_time_point_number:
             return False
-        return (
-                other._positions_by_time_point[0]
-                == self._positions_by_time_point[0]
-        )
+        return other._positions_by_time_point[0] == self._positions_by_time_point[0]
 
-    def find_all_previous_and_descending_tracks(
-            self, *, include_self: bool = False
-    ) -> Iterable["LinkingTrack"]:
+    def find_all_previous_and_descending_tracks(self, *, include_self: bool = False) -> Iterable["LinkingTrack"]:
         """Finds all tracks that are either before this track, or after this track.
 
         Note: this method will not tracks that branched off earlier in the lineage tree, like sister tracks, or
@@ -214,13 +166,9 @@ class LinkingTrack:
         lineage, use find_all_tracks_in_same_lineage.
         """
         yield from self.find_all_previous_tracks(include_self=include_self)
-        yield from self.find_all_descending_tracks(
-            include_self=False
-        )  # Avoid including self twice
+        yield from self.find_all_descending_tracks(include_self=False)  # Avoid including self twice
 
-    def find_all_tracks_in_same_lineage(
-            self, *, include_self: bool = False
-    ) -> Iterable["LinkingTrack"]:
+    def find_all_tracks_in_same_lineage(self, *, include_self: bool = False) -> Iterable["LinkingTrack"]:
         """Finds all tracks that are in the same lineage as this track.
 
         Note: in case of cell merges, an arbitrary choice is made to follow one of the ancestors.
@@ -229,7 +177,7 @@ class LinkingTrack:
         while len(first_track._previous_tracks) > 0:
             first_track = next(iter(first_track._previous_tracks))
         for track in first_track.find_all_descending_tracks(include_self=True):
-            if include_self or track != self:
+            if include_self or not track == self:
                 yield track
 
     def get_duration_in_time_points(self) -> int:
@@ -243,21 +191,17 @@ class LinkingTrack:
 
     def is_time_point_number_in_range(self, time_point_number: int) -> bool:
         """Checks if the given time point number is in the range of this track."""
-        return (
-                self._min_time_point_number
-                <= time_point_number
-                < self._min_time_point_number + len(self._positions_by_time_point)
-        )
+        return (self._min_time_point_number <= time_point_number <
+                self._min_time_point_number + len(self._positions_by_time_point))
 
 
 class Links:
     """Represents all links between positions at different time points. This is used to follow particles over time. If a
     position is linked to two positions in the next time step, than that is a cell division. If a position is linked to
-    no position in the next step, then either the cell died or the cell moved out of the image.
-    """
+    no position in the next step, then either the cell died or the cell moved out of the image."""
 
     _tracks: List[LinkingTrack]
-    _position_to_track: Dict[Position, LinkingTrack]
+    _position_to_track: Dict[str, LinkingTrack]
 
     def __init__(self):
         self._tracks = []
@@ -273,13 +217,18 @@ class Links:
             self._tracks = links._tracks
             self._position_to_track = links._position_to_track
 
+    def add_track(self, track: LinkingTrack):
+        """Adds a track to the linking network. This is useful if you have a track that is not linked to the rest of the
+        network yet."""
+        if len(track._previous_tracks) > 0 or len(track._next_tracks) > 0:
+            raise ValueError("Track is already linked to other tracks")
+        self._tracks.append(track)
+        for position in track.positions():
+            self._position_to_track[position.to_dict_key()] = track
+
     def remove_all_links(self):
         """Removes all links in the experiment."""
-        for (
-                track
-        ) in (
-                self._tracks
-        ):  # Help the garbage collector by removing all the cyclic dependencies
+        for track in self._tracks:  # Help the garbage collector by removing all the cyclic dependencies
             track._next_tracks.clear()
             track._previous_tracks.clear()
         self._tracks.clear()
@@ -287,7 +236,7 @@ class Links:
 
     def remove_links_of_position(self, position: Position):
         """Removes all links from and to the position."""
-        track = self._position_to_track.get(position)
+        track = self._position_to_track.get(position.to_dict_key())
         if track is None:
             return
 
@@ -308,13 +257,9 @@ class Links:
 
             # Remove actual position
             track._positions_by_time_point[0] = None
-            while (
-                    track._positions_by_time_point[0] is None
-            ):  # Remove all Nones at the beginning
+            while track._positions_by_time_point[0] is None:  # Remove all Nones at the beginning
                 track._min_time_point_number += 1
-                track._positions_by_time_point = (
-                    track._positions_by_time_point[1:]
-                )
+                track._positions_by_time_point = track._positions_by_time_point[1:]
         else:
             # Position is further in the track
             if position.time_point_number() < track.last_time_point_number():
@@ -333,29 +278,23 @@ class Links:
             self._try_remove_if_one_length_track(track)
 
         # Remove from index
-        del self._position_to_track[position]
+        del self._position_to_track[position.to_dict_key()]
 
     def replace_position(self, old_position: Position, position_new: Position):
         """Replaces one position with another. The old position is removed from the graph, the new one is added. All
         links will be moved over to the new position"""
-        if (
-                old_position.time_point_number()
-                != position_new.time_point_number()
-        ):
-            raise ValueError(
-                "Cannot replace with position at another time point"
-            )
+        if old_position.time_point_number() != position_new.time_point_number():
+            raise ValueError("Cannot replace with position at another time point")
 
         # Update in track
-        track = self._position_to_track.get(old_position)
+        track = self._position_to_track.get(old_position.to_dict_key())
         if track is not None:
             track._positions_by_time_point[
-                position_new.time_point_number() - track._min_time_point_number
-                ] = position_new
+                position_new.time_point_number() - track._min_time_point_number] = position_new
 
             # Update reference to track
-            del self._position_to_track[old_position]
-            self._position_to_track[position_new] = track
+            del self._position_to_track[old_position.to_dict_key()]
+            self._position_to_track[position_new.to_dict_key()] = track
 
     def has_links(self) -> bool:
         """Returns True if at least one link is present."""
@@ -365,7 +304,7 @@ class Links:
         """Returns the positions linked to this position in the next time point. Normally, this will be one position.
         However, if the cell divides between now and the next time point, two positions are returned. And if the cell
         track ends, zero positions are returned."""
-        track = self._position_to_track.get(position)
+        track = self._position_to_track.get(position.to_dict_key())
         if track is None:
             return set()
         return track._find_futures(position.time_point_number())
@@ -381,7 +320,7 @@ class Links:
         """Returns the positions linked to this position in the previous time point. Normally, this will be one
         position. However, the cell track just started, zero positions are returned. In the case of a cell merge,
         multiple positions are returned."""
-        track = self._position_to_track.get(position)
+        track = self._position_to_track.get(position.to_dict_key())
         if track is None:
             return set()
         return track._find_pasts(position.time_point_number())
@@ -394,34 +333,22 @@ class Links:
             return pasts.pop()
         return None
 
-    def find_appeared_positions(
-            self, time_point_number_to_ignore: Optional[int] = None
-    ) -> Iterable[Position]:
+    def find_appeared_positions(self, time_point_number_to_ignore: Optional[int] = None) -> Iterable[Position]:
         """This method gets all positions that "popped up out of nothing": that have no links to the past. You can give
         this method a time point number to ignore. Usually, this would be the first time point number of the experiment,
-        as cells that have no links to the past in the first time point are not that interesting.
-        """
+        as cells that have no links to the past in the first time point are not that interesting."""
         for track in self._tracks:
-            if (
-                    time_point_number_to_ignore is None
-                    or time_point_number_to_ignore != track._min_time_point_number
-            ):
+            if time_point_number_to_ignore is None or time_point_number_to_ignore != track._min_time_point_number:
                 if len(track.get_previous_tracks()) == 0:
                     yield track.find_first_position()
 
-    def find_disappeared_positions(
-            self, time_point_number_to_ignore: Optional[int] = None
-    ) -> Iterable[Position]:
+    def find_disappeared_positions(self, time_point_number_to_ignore: Optional[int] = None) -> Iterable[Position]:
         """This method gets all positions that "disappear into nothing": that have no links to the future. You can give
         this method a time point number to ignore. Usually, this would be the last time point number of the experiment,
-        as cells that have no links to the future in the last time point are not that interesting.
-        """
+        as cells that have no links to the future in the last time point are not that interesting."""
         for track in self._tracks:
-            if (
-                    time_point_number_to_ignore is None
-                    or time_point_number_to_ignore
-                    != track._positions_by_time_point[-1].time_point_number()
-            ):
+            if time_point_number_to_ignore is None or time_point_number_to_ignore != track._positions_by_time_point[
+                -1].time_point_number():
                 if len(track.get_next_tracks()) == 0:
                     yield track.find_last_position()
 
@@ -429,44 +356,40 @@ class Links:
         """Adds a link between the positions. The linking network will be initialized if necessary."""
         dt = position1.time_point_number() - position2.time_point_number()
         if dt == 0:
-            raise ValueError(
-                f"Positions are in the same time point: {position1} cannot be linked to {position2}"
-            )
+            raise ValueError(f"Positions are in the same time point: {position1} cannot be linked to {position2}")
         if dt > 0:
             # Make sure position1 comes first in time
             position1, position2 = position2, position1
             dt = -dt
         if dt < -1:
-            raise ValueError(
-                f"Link skipped a time point: {position1} cannot be linked to {position2}"
-            )
+            raise ValueError(f"Link skipped a time point: {position1} cannot be linked to {position2}")
 
-        track1 = self._position_to_track.get(position1)
-        track2 = self._position_to_track.get(position2)
+        track1 = self._position_to_track.get(position1.to_dict_key())
+        track2 = self._position_to_track.get(position2.to_dict_key())
 
         if track1 is not None and track2 is not None and self.contains_link(position1, position2):
             return  # Already has that link, don't add a second link (this will corrupt the data structure)
 
         if track1 is not None and track2 is None:
-            if (track1.last_time_point_number() == position1.time_point_number()
-                    and not track1._next_tracks
-                    and position2.time_point_number() == position1.time_point_number() + 1):
+            if track1.last_time_point_number() == position1.time_point_number() \
+                    and not track1._next_tracks \
+                    and position2.time_point_number() == position1.time_point_number() + 1:
                 # This very common case of adding a single position to a track is singled out
                 # It could be handled just fine by the code below, which will create a new track and then merge the
                 # tracks, but this is faster
                 track1._positions_by_time_point.append(position2)
-                self._position_to_track[position2] = track1
+                self._position_to_track[position2.to_dict_key()] = track1
                 return
 
         if track1 is None:  # Create new mini-track
             track1 = LinkingTrack([position1])
             self._tracks.append(track1)
-            self._position_to_track[position1] = track1
+            self._position_to_track[position1.to_dict_key()] = track1
 
         if track2 is None:  # Create new mini-track
             track2 = LinkingTrack([position2])
             self._tracks.append(track2)
-            self._position_to_track[position2] = track2
+            self._position_to_track[position2.to_dict_key()] = track2
 
         if position1.time_point_number() < track1.last_time_point_number():
             # Need to split track 1 so that position1 is at the end
@@ -474,9 +397,7 @@ class Links:
 
         if position2.time_point_number() > track2._min_time_point_number:
             # Need to split track 2 so that position2 is at the start
-            part_after_split = self._split_track(
-                track2, track2.get_age(position2)
-            )
+            part_after_split = self._split_track(track2, track2.get_age(position2))
             track2 = part_after_split
 
         # Connect the tracks
@@ -499,13 +420,9 @@ class Links:
         None to delete the attribute.
         """
         if data_name == "id":
-            raise ValueError(
-                "The data_name 'id' is reserved for internal use."
-            )
+            raise ValueError("The data_name 'id' is reserved for internal use.")
         if data_name.startswith("__"):
-            raise ValueError(
-                f"The data name {data_name} is not allowed: data names must not start with '__'."
-            )
+            raise ValueError(f"The data name {data_name} is not allowed: data names must not start with '__'.")
 
         # Find earliest track
         previous_tracks = track._previous_tracks
@@ -534,16 +451,15 @@ class Links:
 
     def find_links_of(self, position: Position) -> Set[Position]:
         """Gets all links of a position, both to the past and the future."""
-        track = self._position_to_track.get(position)
+        track = self._position_to_track.get(position.to_dict_key())
         if track is None:
             return set()
-        return track._find_futures(
-            position.time_point_number()
-        ) | track._find_pasts(position.time_point_number())
+        return track._find_futures(position.time_point_number()) | track._find_pasts(position.time_point_number())
 
     def find_all_positions(self) -> Iterable[Position]:
         """Gets all positions in the linking graph. Note that positions without links are not included here."""
-        return self._position_to_track.keys()
+        for track in self._tracks:
+            yield from track.positions()
 
     def remove_link(self, position1: Position, position2: Position):
         """Removes the link between the given positions. Does nothing if there is no link between the positions."""
@@ -553,46 +469,25 @@ class Links:
         if position1.time_point_number() == position2.time_point_number():
             return  # No link can possibly exist
 
-        track1 = self._position_to_track.get(position1)
-        track2 = self._position_to_track.get(position2)
+        track1 = self._position_to_track.get(position1.to_dict_key())
+        track2 = self._position_to_track.get(position2.to_dict_key())
         if track1 is None or track2 is None:
             return  # No link exists
         if track1 == track2:
             # So positions are in the same track
 
-            # Check if there is nothing in between
-            for time_point_number in range(
-                    position1.time_point_number() + 1,
-                    position2.time_point_number(),
-            ):
-                if (
-                        track1.find_position_at_time_point_number(
-                            time_point_number
-                        )
-                        is not None
-                ):
-                    return  # There's a position in between, so the specified link doesn't exist
-
             # Split directly after position1
-            new_track = self._split_track(
-                track1,
-                position1.time_point_number()
-                + 1
-                - track1._min_time_point_number,
-            )
+            new_track = self._split_track(track1, position1.time_point_number() + 1 - track1._min_time_point_number)
             track1._next_tracks = []
             self._try_remove_if_one_length_track(track1)
             new_track._previous_tracks = []
             self._try_remove_if_one_length_track(new_track)
         else:
             # Check if the tracks connect
-            if (
-                    track1.last_time_point_number()
-                    != position1.time_point_number()
-            ):
+            if not track1.last_time_point_number() == position1.time_point_number():
                 # Position 1 is not the last position in its track, so it cannot be connected to another track
                 return
-            if track2._min_time_point_number != position2.time_point_number():
+            if not track2._min_time_point_number == position2.time_point_number():
                 # Position 2 is not the first position in its track, so it cannot be connected to another track
                 return
 
@@ -601,21 +496,16 @@ class Links:
                 self._decouple_next_track(track1, next_track=track2)
                 self._decouple_previous_track(track2, previous_track=track1)
 
-    def _decouple_next_track(
-            self, track: LinkingTrack, *, next_track: LinkingTrack
-    ):
+    def _decouple_next_track(self, track: LinkingTrack, *, next_track: LinkingTrack):
         """Removes a next track from the current track. If only one next track remains, a merge with the remaining next
         track is performed. If the track ends up with only a single time point and no links to other tracks, it will be
         removed. Raises ValueError if next_track is not in track.get_next_tracks().
 
         Note: this is a low-level function. If you plan on keeping the next_track object alive (so it's still in the
         linking network), then you'll also need to remove `track` as a previous track from `next_track`. Call
-        self.debug_sanity_check() if you're unsure that the links are still consistent with each other.
-        """
+        self.debug_sanity_check() if you're unsure that the links are still consistent with each other."""
         track._next_tracks.remove(next_track)
-        if (
-                len(track._next_tracks) == 1
-        ):  # Used to have two next tracks, now only one - try a merge
+        if len(track._next_tracks) == 1:  # Used to have two next tracks, now only one - try a merge
             self._try_merge(track, next(iter(track._next_tracks)))
         else:
             self._try_remove_if_one_length_track(track)
@@ -627,12 +517,9 @@ class Links:
 
         Note: this is a low-level function. If you plan on keeping the previous_track object alive (so it's still in the
         linking network), then you'll also need to remove `track` as a next track from `previous_track`. Call
-        self.debug_sanity_check() if you're unsure that the links are still consistent with each other.
-        """
+        self.debug_sanity_check() if you're unsure that the links are still consistent with each other."""
         track._previous_tracks.remove(previous_track)
-        if (
-                len(track._previous_tracks) == 1
-        ):  # Used to have two next tracks, now only one - try a merge
+        if len(track._previous_tracks) == 1:  # Used to have two next tracks, now only one - try a merge
             self._try_merge(track, next(iter(track._previous_tracks)))
         else:
             self._try_remove_if_one_length_track(track)
@@ -647,7 +534,7 @@ class Links:
             return  # Has metadata, don't delete
 
         # Safe to delete
-        del self._position_to_track[track.find_first_position()]
+        del self._position_to_track[track.find_first_position().to_dict_key()]
         self._tracks.remove(track)
 
     def contains_link(self, position1: Position, position2: Position) -> bool:
@@ -662,7 +549,7 @@ class Links:
 
     def contains_position(self, position: Position) -> bool:
         """Returns True if the given position is part of this linking network."""
-        return position in self._position_to_track
+        return position.to_dict_key() in self._position_to_track
 
     def find_all_links(self) -> Iterable[Tuple[Position, Position]]:
         """Gets all available links. The first position is always the earliest in time."""
@@ -685,12 +572,8 @@ class Links:
         """Returns the total number of links."""
         total = 0
         for track in self._tracks:
-            total += (
-                    len(track) - 1
-            )  # A track of three cells contains two links
-            total += len(
-                track._next_tracks
-            )  # Links to next tracks are also links
+            total += len(track) - 1  # A track of three cells contains two links
+            total += len(track._next_tracks)  # Links to next tracks are also links
             # (links to previous track are NOT counted as those links will already be included by that previous track
             # as links to the next track)
         return total
@@ -705,29 +588,22 @@ class Links:
             copied_track._lineage_data = track._lineage_data.copy()
             copy._tracks.append(copied_track)
             for position in track.positions():
-                copy._position_to_track[position] = copied_track
+                copy._position_to_track[position.to_dict_key()] = copied_track
 
         # We can now re-establish the links between all tracks
         for track in self._tracks:
-            track_copy = copy._position_to_track[track.find_first_position()]
+            track_copy = copy._position_to_track[track.find_first_position().to_dict_key()]
             for next_track in track._next_tracks:
-                next_track_copy = copy._position_to_track[
-                    next_track.find_first_position()
-                ]
+                next_track_copy = copy._position_to_track[next_track.find_first_position().to_dict_key()]
                 track_copy._next_tracks.append(next_track_copy)
                 next_track_copy._previous_tracks.append(track_copy)
 
         return copy
 
-    def _split_track(
-            self, old_track: LinkingTrack, split_index: int
-    ) -> LinkingTrack:
+    def _split_track(self, old_track: LinkingTrack, split_index: int) -> LinkingTrack:
         """Modifies the given track so that all positions after a certain time points are removed, and placed in a new
-        track. So positions[0:split_index] will remain in this track, positions[split_index:] will be moved.
-        """
-        positions_after_split = old_track._positions_by_time_point[
-                                split_index:
-                                ]
+        track. So positions[0:split_index] will remain in this track, positions[split_index:] will be moved."""
+        positions_after_split = old_track._positions_by_time_point[split_index:]
 
         # Remove None at front (this is safe, as the last position in the track may never be None)
         while positions_after_split[0] is None:
@@ -740,18 +616,14 @@ class Links:
         track_after_split = LinkingTrack(positions_after_split)
         track_after_split._next_tracks = old_track._next_tracks
         for new_next_track in track_after_split._next_tracks:
-            new_next_track._update_link_to_previous(
-                was=old_track, will_be=track_after_split
-            )
+            new_next_track._update_link_to_previous(was=old_track, will_be=track_after_split)
         track_after_split._previous_tracks = [old_track]
         old_track._next_tracks = [track_after_split]
 
         # Update indices for changed tracks
-        self._tracks.insert(
-            self._tracks.index(old_track) + 1, track_after_split
-        )
+        self._tracks.insert(self._tracks.index(old_track) + 1, track_after_split)
         for position_after_split in positions_after_split:
-            self._position_to_track[position_after_split] = track_after_split
+            self._position_to_track[position_after_split.to_dict_key()] = track_after_split
 
         return track_after_split
 
@@ -763,33 +635,22 @@ class Links:
         else:
             first_track, second_track = track1, track2
 
-        if (
-                len(second_track._previous_tracks) != 1
-                or len(first_track._next_tracks) != 1
-        ):
+        if len(second_track._previous_tracks) != 1 or len(first_track._next_tracks) != 1:
             return  # Cannot be merged
         # Ok, they can be merged into just first_track. Move all positions over to first_track.
-        gap_length = second_track._min_time_point_number - (
-                first_track._min_time_point_number
-                + len(first_track._positions_by_time_point)
-        )
+        gap_length = second_track._min_time_point_number - \
+                     (first_track._min_time_point_number + len(first_track._positions_by_time_point))
         if gap_length != 0:
             raise ValueError("Skipping a time point")
-        first_track._positions_by_time_point += (
-            second_track._positions_by_time_point
-        )
+        first_track._positions_by_time_point += second_track._positions_by_time_point
 
         # Update registries
         first_track._lineage_data.update(second_track._lineage_data)
         self._tracks.remove(second_track)
         for moved_position in second_track.positions():
-            self._position_to_track[moved_position] = first_track
+            self._position_to_track[moved_position.to_dict_key()] = first_track
         first_track._next_tracks = second_track._next_tracks
-        for (
-                new_next_track
-        ) in (
-                first_track._next_tracks
-        ):  # Notify all next tracks that they have a new predecessor
+        for new_next_track in first_track._next_tracks:  # Notify all next tracks that they have a new predecessor
             new_next_track._update_link_to_previous(second_track, first_track)
 
     def debug_sanity_check(self):
@@ -797,68 +658,38 @@ class Links:
         never happen if you only use the public methods (those without a _ at the start), and don't poke around in
         internal code.
 
-        This method is very useful to debug the data structure if you get some weird results.
-        """
+        This method is very useful to debug the data structure if you get some weird results."""
         for position, track in self._position_to_track.items():
             if track not in self._tracks:
-                raise ValueError(
-                    f"{track} is not in the track list, but is in the index for position {position}"
-                )
+                raise ValueError(f"{track} is not in the track list, but is in the index for position {position}")
 
         for track in self._tracks:
             if len(track._positions_by_time_point) == 0:
-                raise ValueError(
-                    f"Empty track at t={track._min_time_point_number}"
-                )
-            if (
-                    len(track._positions_by_time_point) == 1
-                    and len(track._previous_tracks) == 0
-                    and len(track._next_tracks) == 0
-                    and len(track._lineage_data) == 0
-            ):
-                raise ValueError(
-                    f"Length=1 track at t={track._min_time_point_number}"
-                )
+                raise ValueError(f"Empty track at t={track._min_time_point_number}")
+            if len(track._positions_by_time_point) == 1 and len(track._previous_tracks) == 0 \
+                    and len(track._next_tracks) == 0 and len(track._lineage_data) == 0:
+                raise ValueError(f"Length=1 track at t={track._min_time_point_number}")
             if track.find_first_position() is None:
                 raise ValueError(f"{track} has no first position")
             if track.find_last_position() is None:
                 raise ValueError(f"{track} has no last position")
-            if (
-                    len(track._previous_tracks) > 0
-                    and len(track._lineage_data) > 0
-            ):
-                raise ValueError(
-                    f"{track} has lineage meta data, even though it is not the start of a lineage"
-                )
+            if len(track._previous_tracks) > 0 and len(track._lineage_data) > 0:
+                raise ValueError(f"{track} has lineage meta data, even though it is not the start of a lineage")
             for position in track.positions():
-                if position not in self._position_to_track:
+                if position.to_dict_key() not in self._position_to_track:
                     raise ValueError(f"{position} of {track} is not indexed")
-                elif self._position_to_track[position] != track:
-                    raise ValueError(
-                        f"{position} in track {track} is indexed as being in track"
-                        f" {self._position_to_track[position]}"
-                    )
+                elif self._position_to_track[position.to_dict_key()] != track:
+                    raise ValueError(f"{position} in track {track} is indexed as being in track"
+                                     f" {self._position_to_track[position.to_dict_key()]}")
             for previous_track in track._previous_tracks:
-                if (
-                        previous_track.last_time_point_number()
-                        >= track._min_time_point_number
-                ):
-                    raise ValueError(
-                        f"Previous track {previous_track} is not in the past compared to {track}"
-                    )
+                if previous_track.last_time_point_number() >= track._min_time_point_number:
+                    raise ValueError(f"Previous track {previous_track} is not in the past compared to {track}")
                 if track not in previous_track._next_tracks:
-                    raise ValueError(
-                        f"Current track {track} is connected to previous track {previous_track}, but that"
-                        f" track is not connected to the current track."
-                    )
-            if (
-                    len(track._next_tracks) == 1
-                    and len(track._next_tracks[0]._previous_tracks) == 1
-            ):
-                raise ValueError(
-                    f"Track {track} and {track._next_tracks[0]} could have been merged into"
-                    f" a single track"
-                )
+                    raise ValueError(f"Current track {track} is connected to previous track {previous_track}, but that"
+                                     f" track is not connected to the current track.")
+            if len(track._next_tracks) == 1 and len(track._next_tracks[0]._previous_tracks) == 1:
+                raise ValueError(f"Track {track} and {track._next_tracks[0]} could have been merged into"
+                                 f" a single track")
 
     def find_starting_tracks(self) -> Iterable[LinkingTrack]:
         """Gets all starting tracks, which are all tracks that have no links to the past."""
@@ -880,16 +711,14 @@ class Links:
 
     def get_track(self, position: Position) -> Optional[LinkingTrack]:
         """Gets the track the given position belong in."""
-        return self._position_to_track.get(position)
+        return self._position_to_track.get(position.to_dict_key())
 
     def sort_tracks_by_x(self):
         """Sorts the tracks, which affects the order in which most find_ functions return data (like
         find_starting_tracks)."""
         self._tracks.sort(key=lambda track: track.find_first_position().x)
 
-    def find_all_tracks_in_time_point(
-            self, time_point_number: int
-    ) -> Iterable[LinkingTrack]:
+    def find_all_tracks_in_time_point(self, time_point_number: int) -> Iterable[LinkingTrack]:
         """This method finds all tracks that run trough the given time point."""
         for track in self._tracks:
             if track._min_time_point_number > time_point_number:
@@ -911,13 +740,10 @@ class Links:
         before them in time."""
         yield from enumerate(self._tracks)
 
-    def get_position_near_time_point(
-            self, position: Position, time_point: TimePoint
-    ) -> Position:
+    def get_position_near_time_point(self, position: Position, time_point: TimePoint) -> Position:
         """Follows the position backwards or forwards in time through the linking network, until a position as close as
         possible to the specified time has been reached. If the given position has no links, the same position will just
-        be returned. If a cell divides, an arbitrary daughter cell will be picked.
-        """
+        be returned. If a cell divides, an arbitrary daughter cell will be picked."""
         track = self.get_track(position)
         if track is None:
             return position  # Position has no links
@@ -930,9 +756,7 @@ class Links:
             while track.first_time_point_number() > time_point_number:
                 next_tracks = track.get_previous_tracks()
                 if len(next_tracks) == 0:
-                    return (
-                        track.find_first_position()
-                    )  # Cannot go back further
+                    return track.find_first_position()  # Cannot go back further
                 else:
                     track = next_tracks.pop()
             return track.find_position_at_time_point_number(time_point_number)
@@ -941,32 +765,23 @@ class Links:
             while track.last_time_point_number() < time_point_number:
                 next_tracks = track.get_next_tracks()
                 if len(next_tracks) == 0:
-                    return (
-                        track.find_last_position()
-                    )  # Cannot go forward further
+                    return track.find_last_position()  # Cannot go forward further
                 else:
                     track = next_tracks.pop()
             return track.find_position_at_time_point_number(time_point_number)
 
-    def get_position_at_time_point(
-            self, position: Position, time_point: TimePoint
-    ) -> Optional[Position]:
+    def get_position_at_time_point(self, position: Position, time_point: TimePoint) -> Optional[Position]:
         """Follows the position backwards or forwards in time through the linking network, until a position at the
         given time point has been found. If a cell divides, an arbitrary daughter cell will be picked. Returns None if
         we couldn't track the position until the requested time point."""
-        position_near_time_point = self.get_position_near_time_point(
-            position, time_point
-        )
+        position_near_time_point = self.get_position_near_time_point(position, time_point)
         if position_near_time_point.time_point() != time_point:
             return None  # Failed
         return position_near_time_point
 
-    def of_time_point(
-            self, time_point: TimePoint
-    ) -> Iterable[Tuple[Position, Position]]:
+    def of_time_point(self, time_point: TimePoint) -> Iterable[Tuple[Position, Position]]:
         """Returns all links where one of the two positions is in that time point. The first position in each tuple is
-        in the given time point, the second one is one time point earlier or later.
-        """
+        in the given time point, the second one is one time point earlier or later."""
         time_point_number = time_point.time_point_number()
         for track in self._tracks:
             track_min_time_point_number = track._min_time_point_number
@@ -976,9 +791,7 @@ class Links:
             if track_max_time_point_number < time_point_number:
                 continue
             # Track crosses this time point
-            position = track.find_position_at_time_point_number(
-                time_point_number
-            )
+            position = track.find_position_at_time_point_number(time_point_number)
             for past_position in track._find_pasts(time_point_number):
                 yield position, past_position
             for future_position in track._find_futures(time_point_number):
@@ -993,7 +806,7 @@ class Links:
 
     def iterate_to_past(self, position: Position) -> Iterable[Position]:
         """Iterates towards the past, yielding this position, the previous position, the position before that, ect.
-        Stops at cell merges or at the first detection."""
+         Stops at cell merges or at the first detection."""
         track = self.get_track(position)
         if track is None:
             yield position  # Only yield position itself
@@ -1013,7 +826,7 @@ class Links:
 
     def iterate_to_future(self, position: Position) -> Iterable[Position]:
         """Iterates towards the future, yielding this position, the next position, the position after that, ect.
-        Stops at cell divisions or at the last detection."""
+         Stops at cell divisions or at the last detection."""
         track = self.get_track(position)
         if track is None:
             yield position  # Only yield position itself
@@ -1038,8 +851,23 @@ class Links:
         for track in self._tracks:
             track._min_time_point_number += time_point_delta
             for i, position in enumerate(track._positions_by_time_point):
-                moved_position = position.with_time_point_number(
-                    position.time_point_number() + time_point_delta
-                )
+                moved_position = position.with_time_point_number(position.time_point_number() + time_point_delta)
                 track._positions_by_time_point[i] = moved_position
-                self._position_to_track[moved_position] = track
+                self._position_to_track[moved_position.to_dict_key()] = track
+
+    def connect_tracks(self, *, previous: LinkingTrack, next: LinkingTrack):
+        """Connects two tracks. The previous track should end one time point before the next track starts. Raises
+        ValueError if the tracks are not after each other in time or if they are already connected."""
+
+        # Check if after each other in time
+        if previous.last_time_point_number() + 1 != next.first_time_point_number():
+            raise ValueError("Tracks are not after each other in time")
+
+        # Check if not already connected
+        if next in previous._next_tracks:
+            raise ValueError("Tracks are already connected")
+        # As long as the data structure is not corrupted, we don't need to check if previous is in next._previous_tracks
+
+        # Connect the tracks
+        previous._next_tracks.append(next)
+        next._previous_tracks.append(previous)
