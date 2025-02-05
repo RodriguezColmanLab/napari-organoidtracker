@@ -16,7 +16,7 @@ https://napari.org/stable/plugins/index.html
 
 You can install `napari-organoidtracker` via `pip`:
 
-    pip install napari-organoidtracker
+    pip install git+https://github.com/RodriguezColmanLab/napari-organoidtracker.git
 
 
 ## License
