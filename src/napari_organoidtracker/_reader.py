@@ -10,6 +10,7 @@ import json
 from typing import Any, Dict, List
 
 from napari_organoidtracker import _experiment
+from napari_organoidtracker._basics import TimePoint
 from napari_organoidtracker._experiment import Experiment
 from napari_organoidtracker._links import Links, LinkingTrack
 from napari_organoidtracker._position import Position
@@ -93,6 +94,12 @@ def _read_organoidtracker_file(filepath) -> Experiment:
 
     version = data.get("version", "v1")
     if version == "v1":
+        if "shapes" in data:
+            # Deprecated, nowadays stored in "positions"
+            _parse_simple_position_format(experiment, data["shapes"])
+        elif "positions" in data:
+            _parse_simple_position_format(experiment, data["positions"])
+
         if "links" in data:
             _parse_d3_links_format(experiment, data["links"])
         elif "links_scratch" in data:  # Deprecated, was used back when experiments could hold multiple linking sets
@@ -100,20 +107,14 @@ def _read_organoidtracker_file(filepath) -> Experiment:
         elif "links_baseline" in data:  # Deprecated, was used back when experiments could hold multiple linking sets
             _parse_d3_links_format(experiment, data["links_baseline"])
     elif version == "v2":
+        if "positions" in data:
+            _parse_positions_and_meta_format(experiment, data["positions"])
         _parse_tracks_and_meta_format(experiment, data["tracks"])
     else:
         raise ValueError(
             "Unknown data version",
             "This plugin is not able to load data of version " + str(data["version"]) + ".",
         )
-
-    # if "shapes" in data:
-    # Deprecated, nowadays stored in "positions"
-    # _parse_position_format(experiment, data["shapes"], min_time_point, max_time_point)
-    # elif "positions" in data:
-    # _parse_position_format(experiment, data["positions"], min_time_point, max_time_point)
-
-
 
     return experiment
 
@@ -164,6 +165,36 @@ def _parse_position(json_structure: Dict[str, Any]) -> Position:
             time_point_number=json_structure["_time_point_number"],
         )
     return Position(json_structure["x"], json_structure["y"], json_structure["z"])
+
+
+def _parse_simple_position_format(experiment: Experiment, json_structure: Dict[str, List]):
+    positions = experiment.positions
+
+    for time_point_number, raw_positions in json_structure.items():
+        time_point_number = int(time_point_number)  # str -> int
+
+        for raw_position in raw_positions:
+            position = Position(*raw_position[0:3], time_point_number=time_point_number)
+            positions.add(position)
+
+
+def _parse_positions_and_meta_format(experiment: Experiment, positions_json: List[Dict]):
+    positions = experiment.positions
+
+    for time_point_json in positions_json:
+        time_point_number = time_point_json["time_point"]
+
+        has_meta = "position_meta" in time_point_json
+        positions_of_time_point = list() if has_meta else None
+        for raw_position in time_point_json["coords_xyz_px"]:
+            position = Position(*raw_position, time_point_number=time_point_number)
+            positions.add(position)
+            if positions_of_time_point is not None:
+                positions_of_time_point.append(position)
+
+        if has_meta:
+            experiment.position_data.add_data_from_time_point_dict(TimePoint(time_point_number), positions_of_time_point,
+                                                                   time_point_json["position_meta"])
 
 
 def _parse_tracks_and_meta_format(experiment: Experiment, tracks_json: List[Dict]):

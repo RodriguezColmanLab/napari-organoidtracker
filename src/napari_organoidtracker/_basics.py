@@ -1,4 +1,6 @@
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional, Iterable
+
+import numpy
 
 MPLColor = Union[
     Tuple[float, float, float], Tuple[float, float, float, float], str, float
@@ -62,3 +64,45 @@ class TimePoint:
                 self._time_point_number - other.time_point_number()
             )
         return NotImplemented
+
+
+def min_none(numbers: Union[Optional[float], Iterable[Optional[float]]], *args: Optional[float]):
+    """Calculates the minimal number. None values are ignored. Usage:
+
+    >>> min_none(2, 3, 5, None, 5) == 2
+    >>> min_none([4, None, 2, None, -1]) == -1
+    >>> min_none([]) is None
+    >>> min_none(None, None, None) is None
+    """
+    min_value = None
+
+    if numbers is None or not numpy.iterable(numbers):
+        numbers = [numbers] + list(args)
+
+    for number in numbers:
+        if number is None:
+            continue
+        if min_value is None or number < min_value:
+            min_value = number
+    return min_value
+
+
+def max_none(numbers: Union[Optional[float], Iterable[Optional[float]]], *args: Optional[float]):
+    """Calculates the minimal number. None values are ignored. Usage:
+
+    >>> max_none(2, 3, 5, None, 5)  == 5
+    >>> max_none([4, None, 2, None, -1]) == 4
+    >>> max_none([]) is None
+    >>> max_none(None, None, None) is None
+    """
+    max_value = None
+
+    if numbers is None or not numpy.iterable(numbers):
+        numbers = [numbers] + list(args)
+
+    for number in numbers:
+        if number is None:
+            continue
+        if max_value is None or number > max_value:
+            max_value = number
+    return max_value
