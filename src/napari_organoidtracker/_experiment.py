@@ -1,24 +1,28 @@
+from random import random
 from typing import List, Tuple, Dict, Iterable
 
 import numpy
 
 from napari_organoidtracker._links import Links
+from napari_organoidtracker._position_collection import PositionCollection
 from napari_organoidtracker._position_data import PositionData
 
 
 class Experiment:
     links: Links
+    positions: PositionCollection
     position_data: PositionData
 
     def __init__(self):
         self.links = Links()
+        self.positions = PositionCollection()
         self.position_data = PositionData()
 
 
-def _get_float_bool_metadata_keys(position_data: PositionData) -> Iterable[str]:
+def _get_str_float_bool_metadata_keys(position_data: PositionData) -> Iterable[str]:
     """Get the metadata keys of values that are floats or booleans."""
     for metadata_key, metadata_type in position_data.get_data_names_and_types().items():
-        if metadata_type == bool or metadata_type == float:
+        if metadata_type == bool or metadata_type == float or metadata_type == int or metadata_type == str:
             yield metadata_key
 
 
@@ -29,12 +33,11 @@ def _experiment_to_napari(experiment: Experiment) -> List[Tuple[numpy.ndarray, D
     """
 
     links = experiment.links
-    positions_table = []  # Each row is [track_id, t, z, y, z], ordered by track_id and then t
+    positions_table = []  # Each row is [track_id, t, z, y, x], ordered by track_id and then t
     metadata = dict()
-    for metadata_key in _get_float_bool_metadata_keys(experiment.position_data):
+    for metadata_key in _get_str_float_bool_metadata_keys(experiment.position_data):
         metadata[metadata_key] = []
 
-    nan = float("nan")
     linking_graph = {}
     for track_id, track in links.find_all_tracks_and_ids():
         for position in track.positions():
@@ -52,8 +55,10 @@ def _experiment_to_napari(experiment: Experiment) -> List[Tuple[numpy.ndarray, D
             # Build metadata dictionary
             for metadata_key, metadata_values in metadata.items():
                 metadata_value = experiment.position_data.get_position_data(position, metadata_key)
+                if isinstance(metadata_value, str):
+                    metadata_value = abs(hash(metadata_value)) % 1000
                 if metadata_value is None or not isinstance(metadata_value, (bool, float, int)):
-                    metadata_values.append(nan)
+                    metadata_values.append(0)
                 else:
                     metadata_values.append(metadata_value)
 
